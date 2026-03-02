@@ -4,6 +4,7 @@ import sys
 import asyncio
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 import aiofiles
 
 from app.sources.market import MarketData
@@ -13,7 +14,7 @@ from app.sources.schwab import SchwabMarketData
 from app.sources.fred import FredSource
 from app.config import TICKERS
 
-DATA_DIR = Path("/app/data")
+DATA_DIR = Path(os.getenv("DATA_DIR", "/app/data"))
 REPORT_PATH = DATA_DIR / "report.md"
 TEMPLATE_PATH = Path(__file__).parent / "templates" / "report.md"
 
@@ -29,10 +30,8 @@ def to_float(val, default=0.0):
         return default
 
 def format_table(data_dict, tickers):
-    table = "| Ticker | Price | RSI(14) | IVR | ZGL | GEX Sent | PCR |
-"
-    table += "|---|---|---|---|---|---|---|
-"
+    table = "| Ticker | Price | RSI(14) | IVR | ZGL | GEX Sent | PCR |\n"
+    table += "|---|---|---|---|---|---|---|\n"
     
     for t in tickers:
         info = data_dict.get(t, {})
@@ -53,8 +52,7 @@ def format_table(data_dict, tickers):
         pcr = info.get('PCR_OI', '-')
         if isinstance(pcr, (int, float)): pcr = f"{pcr:.2f}"
         
-        table += f"| **{t}** | {price} | {rsi} | {ivr} | {zgl} | {sent} | {pcr} |
-"
+        table += f"| **{t}** | {price} | {rsi} | {ivr} | {zgl} | {sent} | {pcr} |\n"
     return table
 
 def format_report(template, data):
@@ -78,8 +76,7 @@ def format_report(template, data):
     if isinstance(cal, list):
         for item in cal:
             if isinstance(item, dict):
-                cal_rows += f"*   **{item.get('ticker', 'N/A')}:** {item.get('date', 'N/A')}
-"
+                cal_rows += f"*   **{item.get('ticker', 'N/A')}:** {item.get('date', 'N/A')}\n"
     if not cal_rows:
         cal_rows = "*   No upcoming major earnings in watch list."
 
@@ -88,8 +85,7 @@ def format_report(template, data):
     today_rows = ""
     if todays_prints:
         for p in todays_prints:
-            today_rows += f"*   **{p['series_title']}:** {p['value']} (Period: {p['date']})
-"
+            today_rows += f"*   **{p['series_title']}:** {p['value']} (Period: {p['date']})\n"
     else:
         today_rows = "*   No key economic prints today."
 
@@ -97,8 +93,7 @@ def format_report(template, data):
     upcoming_rows = ""
     if upcoming:
         for item in upcoming:
-            upcoming_rows += f"*   **{item['release_name']}:** {item['date']}
-"
+            upcoming_rows += f"*   **{item['release_name']}:** {item['date']}\n"
     else:
         upcoming_rows = "*   No major economic releases scheduled for next 30 days."
 
@@ -112,7 +107,7 @@ def format_report(template, data):
         return to_float(macro.get(ticker_key))
 
     context = {
-        'date': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'date': datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %H:%M:%S"),
         'sentiment_label': sent.get('Sentiment_Label', 'N/A'),
         'sentiment_score': sent.get('Average_Sentiment_Score', 'N/A'),
         'volatility_regime': vol.get('Term_Structure', 'N/A'),
@@ -135,7 +130,7 @@ def format_report(template, data):
     return template.format(**context)
 
 async def generate_report_logic():
-    print(f"[{datetime.now()}] Starting Finance Analyst Report Generation...")
+    print(f"[{datetime.now(ZoneInfo('America/New_York'))}] Starting Finance Analyst Report Generation...")
     
     # Initialize sources
     # Schwab is optional/best-effort
@@ -176,16 +171,25 @@ async def generate_report_logic():
         report_content = format_report(template, aggregated_data)
     except Exception as e:
         print(f"Error formatting report: {e}")
-        report_content = f"# Error Generating Report
+        report_content = f"""# Error Generating Report
 
-{e}"
+{e}"""
 
     # Ensure data directory exists
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     
-    # Write to file asynchronously
-    print(f"Writing report to {REPORT_PATH}...")
-    async with aiofiles.open(REPORT_PATH, mode='w') as f:
-        await f.write(report_content)
+    # Generate timestamped filename
+    timestamp = datetime.now(ZoneInfo("America/New_York")).strftime("%Y%m%d-%H%M%S")
+    timestamped_report_path = DATA_DIR / f"report-{timestamp}.md"
+
+    # Write to both files
+    print(f"Writing report to {REPORT_PATH} and {timestamped_report_path}...")
+    try:
+        async with aiofiles.open(REPORT_PATH, mode='w') as f:
+            await f.write(report_content)
+        async with aiofiles.open(timestamped_report_path, mode='w') as f:
+            await f.write(report_content)
+    except Exception as e:
+        print(f"Error writing report files: {e}")
         
-    print(f"[{datetime.now()}] Report generation complete.")
+    print(f"[{datetime.now(ZoneInfo('America/New_York'))}] Report generation complete.")
