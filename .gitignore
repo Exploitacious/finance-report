@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 tokens.json
+GEMINI.md
 .env
 .venv
 venv/
