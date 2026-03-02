@@ -1,2 +1,11 @@
 fastapi
 uvicorn
+python-dotenv
+httpx
+requests
+yfinance
+pandas
+numpy
+schwab-py
+python-dateutil
+aiofiles
