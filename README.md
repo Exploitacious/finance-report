@@ -7,17 +7,30 @@ An automated financial reporting tool that aggregates data from Schwab, FRED (Fe
 This application is deployed using a GitOps pipeline:
 1.  **GitHub Actions**: Builds the Docker image and pushes it to GitHub Container Registry (GHCR).
 2.  **Watchtower**: Automatically updates the running container when a new image is pushed to `latest`.
-3.  **Data Persistence**:
-    -   **Tokens**: Schwab API tokens are read from a read-only volume mounted at `/app/tokens`.
-    -   **Data**: Reports and state files are written to a volume mounted at `/app/data`.
+## Data Persistence
+- **Tokens**: Schwab API tokens are read from `/app/tokens/tokens.json` by default (or via `SCHWAB_TOKEN_FILE` environment variable).
+- **Data**: Reports and state files are written to `app/data` (or via `DATA_DIR` environment variable).
 
 ## Deployment
 
-To deploy the initial server instance, run the following command:
+### Local Development
+1. Install dependencies: `pip install -r requirements.txt`
+2. Create a `.env` file with your API keys.
+3. If using Schwab, ensure `SCHWAB_TOKEN_FILE` points to your token file or it is located at `app/data/tokens.json`.
+4. Start the server: `uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`
 
+### Docker Instance
 ```bash
-docker run -d --name finance-report -p 8080:8000 --env-file /root/finance-report-data/.env -v /root/finance-report-data:/app/data -v /root/finance-report-tokens:/app/tokens --restart unless-stopped ghcr.io/<YOUR_GITHUB_USERNAME>/finance-report:latest
+docker run -d \
+  --name finance-report \
+  -p 8080:8000 \
+  --env-file /root/finance-report-data/.env \
+  -v /root/finance-report-data:/app/data \
+  -v /root/finance-report-tokens:/app/tokens \
+  --restart unless-stopped \
+  ghcr.io/<YOUR_GITHUB_USERNAME>/finance-report:latest
 ```
+
 
 Ensure you replace `<YOUR_GITHUB_USERNAME>` with your actual GitHub username.
 

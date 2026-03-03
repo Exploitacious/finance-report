@@ -7,20 +7,33 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 import aiofiles
 
-from app.sources.market import MarketData
-from app.sources.sentiment import SentimentData
-from app.sources.news import NewsData
-from app.sources.schwab import SchwabMarketData
-from app.sources.fred import FredSource
-from app.config import TICKERS
+from .sources.market import MarketData
+from .sources.sentiment import SentimentData
+from .sources.news import NewsData
+from .sources.schwab import SchwabMarketData
+from .sources.fred import FredSource
+from .config import TICKERS, DATA_DIR, REPORT_PATH
 
-DATA_DIR = Path(os.getenv("DATA_DIR", "/app/data"))
-REPORT_PATH = DATA_DIR / "report.md"
+# Use robust path for templates
 TEMPLATE_PATH = Path(__file__).parent / "templates" / "report.md"
 
 def load_template():
-    with open(TEMPLATE_PATH, 'r') as f:
-        return f.read()
+    try:
+        abs_path = TEMPLATE_PATH.absolute()
+        print(f"INFO: Attempting to load template from {abs_path}")
+        if not abs_path.exists():
+             # Basic Markdown skeleton if file is missing
+            skeleton = "# Finance Analyst Report: {date}\n\n## Market Sentiment: {sentiment_label}\n\n{equity_board_table}\n\n{macro_board_table}"
+            abs_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(abs_path, 'w') as f:
+                f.write(skeleton)
+            return skeleton
+        with open(abs_path, 'r') as f:
+            return f.read()
+    except Exception as e:
+        print(f"CRITICAL ERROR: Failed to load template from {TEMPLATE_PATH.absolute()}: {e}")
+        # Return a fallback string instead of failing completely
+        return "# Finance Analyst Report: {date}\n\nError loading template: " + str(e)
 
 def to_float(val, default=0.0):
     try:
@@ -183,13 +196,13 @@ async def generate_report_logic():
     timestamped_report_path = DATA_DIR / f"report-{timestamp}.md"
 
     # Write to both files
-    print(f"Writing report to {REPORT_PATH} and {timestamped_report_path}...")
+    print(f"INFO: Writing report to {REPORT_PATH.absolute()} and {timestamped_report_path.absolute()}...")
     try:
         async with aiofiles.open(REPORT_PATH, mode='w') as f:
             await f.write(report_content)
         async with aiofiles.open(timestamped_report_path, mode='w') as f:
             await f.write(report_content)
     except Exception as e:
-        print(f"Error writing report files: {e}")
+        print(f"CRITICAL ERROR writing report files to {DATA_DIR.absolute()}: {e}")
         
     print(f"[{datetime.now(ZoneInfo('America/New_York'))}] Report generation complete.")

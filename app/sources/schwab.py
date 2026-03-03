@@ -3,11 +3,12 @@ import json
 import pandas as pd
 from schwab.auth import client_from_token_file
 from schwab.client import Client
+from ..config import SCHWAB_TOKEN_FILE
 
 class SchwabMarketData:
     def __init__(self, token_path=None):
-        # Use environment variable for token path, or default to the mount point
-        self.token_path = os.getenv("SCHWAB_TOKEN_FILE", "/app/data/tokens.json")
+        # Use config or override from constructor
+        self.token_path = token_path or SCHWAB_TOKEN_FILE
         self.client = self._init_client()
 
     def _init_client(self):

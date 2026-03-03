@@ -4,13 +4,13 @@ import json
 import os
 from pathlib import Path
 from .base import DataSource
+from ..config import DATA_DIR
 
 class NewsData(DataSource):
     def fetch(self):
-        # Use configurable data directory
-        data_dir = Path(os.getenv("DATA_DIR", "/app/data"))
-        data_dir.mkdir(parents=True, exist_ok=True)
-        state_file = data_dir / ".news_state.json"
+        # Use configurable data directory from config
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        state_file = DATA_DIR / ".news_state.json"
         
         last_pub_date = self._load_state(state_file)
         

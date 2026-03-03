@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from .base import DataSource
-from app.config import TICKERS, WATCH_LIST
+from ..config import TICKERS, WATCH_LIST
 
 class MarketData(DataSource):
     def __init__(self, schwab_source=None):

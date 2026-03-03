@@ -2,7 +2,7 @@ import os
 import requests
 import time
 from .base import DataSource
-from app.config import PRIMARY_SYMBOL
+from ..config import PRIMARY_SYMBOL
 
 class SentimentData(DataSource):
     def fetch(self):
